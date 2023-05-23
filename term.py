@@ -4,7 +4,7 @@ from fractions import Fraction
 
 spectroscopic = "spdfghiklmnopqrtuvwxyz"
 SPECTROSCOPIC = "SPDFGHIKLMNOPQRTUVWXYZ"
-Global_Max_L = 6
+Global_Max_L = 10
 
 
 def l_from_symbol(lchar: str) -> int:
@@ -99,28 +99,41 @@ def format_J(J: float) -> str:
 
 ################################################################################
 
-if __name__ == "__main__":
-    input_J = -1.0
-    input_string = ""
-    if len(sys.argv) >= 3:
-        input_J = float(Fraction(sys.argv[1]))
-        input_string = sys.argv[2]
-    else:
-        print(
-            "Please provide two arguments in form: J 'electron config'.\n"
-            "e.g., '3/2 sp2d' for J=3/2, and config s,p^2,d"
-        )
-        sys.exit()
 
-    l_list = form_l_list(input_string)
-    J = input_J
+def print_term_each_J(l_list: list):
+    """Given list of single-electron l: prints all possible terms + g-factors"""
+    L0, L1 = minmax_L(l_list)
+
+    N = len(l_list)
+
+    print()
+    for L in range(L0, min(L1, Global_Max_L) + 1):
+        min_2S, max_2S = minmax_twoS(l_list)
+        for twoS in range(min_2S, max_2S + 2, 2):
+            min_2J = 2 * L - twoS
+            if min_2J < 0:
+                min_2J = twoS
+            max_2J = 2 * L + twoS
+
+            for twoJ in range(min_2J, max_2J + 2, 2):
+                J = 0.5 * twoJ
+                if J > L + 0.5 * twoS or J < L - 0.5 * twoS:
+                    continue
+                M = twoS + 1
+                Term = Symbol_from_L(L)
+                g = gJ(J, L, 0.5 * twoS)
+                print("{} {}_{}  g = {gfac:.3f}".format(M, Term, format_J(J), gfac=g))
+            print()
+    return
+
+
+def print_term_single_J(l_list: list, J: float):
+    """Given list of single-electron l, and total J: prints all possible terms + g-factors"""
     twoS0, twoS1 = minmax_twoS(l_list)
     L0, L1 = minmax_L(l_list)
 
     N = len(l_list)
-    print("Number of electrons = ", N)
-    print("J = ", format_J(J))
-    print("Config. = ", input_string, " = ", expand_config_string(input_string))
+    print("J = ", format_J(J), " = ", J)
     if (
         (N % 2 != 0 and J.is_integer())
         or (N % 2 == 0 and not J.is_integer())
@@ -143,3 +156,41 @@ if __name__ == "__main__":
             g = gJ(J, L, 0.5 * twoS)
             print("{} {}_{}  g = {gfac:.3f}".format(M, Term, format_J(J), gfac=g))
         print()
+    return
+
+
+################################################################################
+
+if __name__ == "__main__":
+    input_J = -1.0
+    config_string = ""
+    do_each_J = False
+    if len(sys.argv) == 2:
+        do_each_J = True
+    elif len(sys.argv) > 2:
+        input_J = float(Fraction(sys.argv[2]))
+    else:
+        print(
+            "Please provide two arguments in form: 'electron config' J.\n"
+            "e.g., 'sp2d 3/2' for config s,p^2,d, and J=3/2\n"
+            "J is optional; if none given, will print for all. (May print unphysical terms)"
+        )
+        sys.exit()
+    config_string = sys.argv[1]
+
+    l_list = form_l_list(config_string)
+
+    even_parity = sum(l_list) % 2 == 0
+
+    N = len(l_list)
+    print("Number of electrons = ", N)
+    print("Config. = ", config_string, " = ", expand_config_string(config_string))
+    if even_parity:
+        print("Parity: even")
+    else:
+        print("Parity: odd")
+
+    if do_each_J:
+        print_term_each_J(l_list)
+    else:
+        print_term_single_J(l_list, input_J)
