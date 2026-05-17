@@ -159,21 +159,67 @@ def print_term_single_J(l_list: list, J: float):
     return
 
 
+def parse_term_symbol(s: str) -> tuple[int, int]:
+    """Parse a term symbol like '3H' into (twoS, L). Multiplicity = 2S+1."""
+    i = 0
+    while i < len(s) and (s[i].isdigit() or s[i] == "/"):
+        i += 1
+    if i == 0 or i >= len(s):
+        raise ValueError(f"Invalid term symbol: {s}")
+    M = int(Fraction(s[:i]))
+    lchar = s[i].upper()
+    if lchar not in SPECTROSCOPIC:
+        raise ValueError(f"Invalid L symbol in term: {s}")
+    L = SPECTROSCOPIC.index(lchar)
+    twoS = M - 1
+    return twoS, L
+
+
+def print_term_each_J_for_term(l_list: list, twoS: int, L: int):
+    """Given list of single-electron l, and a term (2S, L): prints all valid J states with g-factors"""
+    twoS0, twoS1 = minmax_twoS(l_list)
+    L0, L1 = minmax_L(l_list)
+
+    M = twoS + 1
+    Term = Symbol_from_L(L)
+    print("Term: {} {}".format(M, Term))
+
+    if L < L0 or L > L1 or twoS < twoS0 or twoS > twoS1 or (twoS - twoS0) % 2 != 0:
+        print("Warning: term not allowed by this configuration")
+
+    print()
+    S = 0.5 * twoS
+    min_2J = abs(2 * L - twoS)
+    max_2J = 2 * L + twoS
+    for twoJ in range(min_2J, max_2J + 2, 2):
+        J = 0.5 * twoJ
+        g = gJ(J, L, S)
+        print("{} {}_{}  g = {gfac:.3f}".format(M, Term, format_J(J), gfac=g))
+    return
+
+
 ################################################################################
 
 if __name__ == "__main__":
     input_J = -1.0
+    input_term = None
     config_string = ""
     do_each_J = False
     if len(sys.argv) == 2:
         do_each_J = True
     elif len(sys.argv) > 2:
-        input_J = float(Fraction(sys.argv[2]))
+        arg2 = sys.argv[2]
+        # If contains a letter, treat as a term symbol (e.g. '3H'); else J
+        if any(c.isalpha() for c in arg2):
+            input_term = parse_term_symbol(arg2)
+        else:
+            input_J = float(Fraction(arg2))
     else:
         print(
-            "Please provide two arguments in form: 'electron config' J.\n"
+            "Please provide two arguments in form: 'electron config' J_or_term.\n"
             "e.g., 'sp2d 3/2' for config s,p^2,d, and J=3/2\n"
-            "J is optional; if none given, will print for all. (May print unphysical terms)"
+            "e.g., 'sp2d 3H' for config s,p^2,d, and term 3H (lists all J)\n"
+            "Second arg is optional; if none given, will print for all. (May print unphysical terms)"
         )
         sys.exit()
     config_string = sys.argv[1]
@@ -192,5 +238,8 @@ if __name__ == "__main__":
 
     if do_each_J:
         print_term_each_J(l_list)
+    elif input_term is not None:
+        twoS, L = input_term
+        print_term_each_J_for_term(l_list, twoS, L)
     else:
         print_term_single_J(l_list, input_J)
