@@ -110,14 +110,12 @@ def print_term_each_J(l_list: list):
     for L in range(L0, min(L1, Global_Max_L) + 1):
         min_2S, max_2S = minmax_twoS(l_list)
         for twoS in range(min_2S, max_2S + 2, 2):
-            min_2J = 2 * L - twoS
-            if min_2J < 0:
-                min_2J = twoS
+            min_2J = abs(2 * L - twoS)
             max_2J = 2 * L + twoS
 
             for twoJ in range(min_2J, max_2J + 2, 2):
                 J = 0.5 * twoJ
-                if J > L + 0.5 * twoS or J < L - 0.5 * twoS:
+                if J > L + 0.5 * twoS or J < abs(L - 0.5 * twoS):
                     continue
                 M = twoS + 1
                 Term = Symbol_from_L(L)
@@ -149,7 +147,7 @@ def print_term_single_J(l_list: list, J: float):
         if J > L + 0.5 * twoS1 or J < L - 0.5 * twoS1:
             continue
         for twoS in range(twoS0, twoS1 + 2, 2):
-            if J > L + 0.5 * twoS or J < L - 0.5 * twoS:
+            if J > L + 0.5 * twoS or J < abs(L - 0.5 * twoS):
                 continue
             M = twoS + 1
             Term = Symbol_from_L(L)
